@@ -32,3 +32,5 @@ Tiempo: período de seguimiento (días)
 [Objetivo] Evento de fallecimiento: si el paciente falleció durante el período de seguimiento (booleano)
 
 # Para esta etapa del proyecto integrador la tarea es convertir la lista de edades a un arreglo de NumPy y calcular el promedio de edad de las personas participantes en el estudio.
+
+El proyecto esta en desarrollo...
