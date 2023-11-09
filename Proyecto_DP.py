@@ -96,3 +96,31 @@ def procesar_datos(dataframe):
 df = pd.read_csv("heart_failure_dataset.csv")
 df_procesado = procesar_datos(df)
 print(df_procesado.head())
+
+# Parte 6.
+
+import sys
+
+
+def procesar_datos(url):
+    respuesta = requests.get(url)
+
+    if respuesta.status_code == 200:
+        dataframe = pd.read_csv(pd.compat.StringIO(respuesta.text))
+
+        if dataframe.isnull().any().any():
+            print("Se encontraron valores faltantes en el DataFrame.")
+            dataframe = dataframe.dropna()
+
+        if dataframe.duplicated().any():
+            print("Se encontraron filas duplicadas en el DataFrame.")
+            dataframe = dataframe.drop_duplicates()
+
+        rangos = [0, 12, 19, 39, 59, float('inf')]
+        etiquetas = ['Niño', 'Adolescente', 'Jóvenes adulto', 'Adulto', 'Adulto mayor']
+        dataframe['CategoriaEdad'] = pd.cut(dataframe['age'], bins=rangos, labels=etiquetas)
+
+        dataframe.to_csv("datos_procesados.csv", index=False)
+        print("Procesamiento completado. Resultados guardados como datos_procesados.csv.")
+    else:
+        print(f"Error al descargar el archivo. Código de respuesta: {respuesta.status_code}")
