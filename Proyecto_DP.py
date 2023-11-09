@@ -70,3 +70,29 @@ def descargar_archivo_csv_desde_url(url, nombre_archivo):
 url = "https://huggingface.co/datasets/mstz/heart_failure/raw/main/heart_failure_clinical_records_dataset.csv"
 nombre_archivo = "heart_failure_dataset.csv"
 descargar_archivo_csv_desde_url(url, nombre_archivo)
+
+# Parte 5.
+
+
+def procesar_datos(dataframe):
+
+    if dataframe.isnull().any().any():
+        print("Se encontraron valores faltantes en el DataFrame.")
+        dataframe = dataframe.dropna()
+
+    if dataframe.duplicated().any():
+        print("Se encontraron filas duplicadas en el DataFrame.")
+        dataframe = dataframe.drop_duplicates()
+
+    rango_edades = (0, 12, 19, 39, 59, float('inf'))
+    labels_edades = ['Niño', 'Adolescente', 'Jóvenes adulto', 'Adulto', 'Adulto mayor']
+    dataframe['CategoriaEdad'] = pd.cut(dataframe['age'], bins=rango_edades, labels=labels_edades)
+
+    dataframe.to_csv("datos_procesados.csv", index=False)
+
+    return dataframe
+
+
+df = pd.read_csv("heart_failure_dataset.csv")
+df_procesado = procesar_datos(df)
+print(df_procesado.head())
