@@ -54,73 +54,76 @@ print(f"Cantidad de mujeres fumadoras: {cantidad_mujeres_fumadoras}")
 # Parte 4.
 
 import requests
+import csv
 
 
-def descargar_archivo_csv_desde_url(url, nombre_archivo):
-    respuesta = requests.get(url)
+def descargar_y_guardar_csv(url):
+    # Realizar la solicitud GET
+    response = requests.get(url)
 
-    if respuesta.status_code == requests.codes.ok:
-        with open(nombre_archivo, 'wb') as archivo:
-            archivo.write(respuesta.content)
-        print(f"Archivo descargado y guardado como {nombre_archivo}")
+    # Verificar si la solicitud fue exitosa (código de estado 200)
+    if response.status_code == 200:
+        # Escribir la respuesta en un archivo CSV usando csv.writer
+        with open(nombre_archivo, 'w', newline='') as archivo_csv:
+            csv_writer = csv.writer(archivo_csv)
+
+            # Decodificar y dividir las líneas del contenido de la respuesta
+            lines = response.content.decode('utf-8').splitlines()
+
+            # Utilizar csv.reader para escribir las líneas en el archivo CSV
+            for line in csv.reader(lines):
+                csv_writer.writerow(line)
+
+        print(f"Descarga exitosa. Los datos han sido guardados en '{nombre_archivo}'.")
     else:
-        print(f"Error al descargar el archivo. Código de respuesta: {respuesta.status_code}")
+        print(f"Error al descargar los datos. Código de estado: {response.status_code}")
 
 
-url = "https://huggingface.co/datasets/mstz/heart_failure/raw/main/heart_failure_clinical_records_dataset.csv"
-nombre_archivo = "heart_failure_dataset.csv"
-descargar_archivo_csv_desde_url(url, nombre_archivo)
+# URL de los datos
+url_datos = "https://huggingface.co/datasets/mstz/heart_failure/raw/main/heart_failure_clinical_records_dataset.csv"
+
+# Llamar a la función para descargar y guardar los datos en un archivo CSV
+descargar_y_guardar_csv(url_datos, "heart_failure_clinical_records_dataset.csv")
+
 
 # Parte 5.
 
 
-def procesar_datos(dataframe):
+def limp(df: pd.DataFrame) -> pd.DataFrame:
 
-    if dataframe.isnull().any().any():
-        print("Se encontraron valores faltantes en el DataFrame.")
-        dataframe = dataframe.dropna()
+    columns_with_missing_values = df.columns[df.isna().any()]
+    for column in columns_with_missing_values:
+        mean_value = df[column].mean()
+        df[column] = df[column].fillna(mean_value)
 
-    if dataframe.duplicated().any():
-        print("Se encontraron filas duplicadas en el DataFrame.")
-        dataframe = dataframe.drop_duplicates()
+    def iqr_c(column):
+        q1 = column.quantile(0.25)
+        q3 = column.quantile(0.75)
+        iqr = q3 - q1
+        lower_bound = q1 - 1.5 * iqr
+        upper_bound = q3 + 1.5 * iqr
+        return (column >= lower_bound) & (column <= upper_bound)
 
-    rango_edades = (0, 12, 19, 39, 59, float('inf'))
-    labels_edades = ['Niño', 'Adolescente', 'Jóvenes adulto', 'Adulto', 'Adulto mayor']
-    dataframe['CategoriaEdad'] = pd.cut(dataframe['age'], bins=rango_edades, labels=labels_edades)
+    for column in df.select_dtypes(include='number'):
+        df = df[iqr_c(df[column])]
 
-    dataframe.to_csv("datos_procesados.csv", index=False)
+    def categorize_age(x):
+        if x <= 12:
+            return 'Niño'
+        elif x <= 19:
+            return 'Adolescente'
+        elif x <= 39:
+            return 'Joven adulto'
+        elif x <= 59:
+            return 'Adulto'
+        else:
+            return 'Adulto mayor'
 
-    return dataframe
+    df['age_group'] = df['age'].apply(categorize_age)
+    df.to_csv("dataset_procesado.csv", index=False)
+    return df
 
 
-df = pd.read_csv("heart_failure_dataset.csv")
-df_procesado = procesar_datos(df)
-print(df_procesado.head())
+df = pd.read_csv('heart_failure_clinical_records_dataset.csv')
+resultado = limp(df)
 
-# Parte 6.
-
-import sys
-
-
-def procesar_datos(url):
-    respuesta = requests.get(url)
-
-    if respuesta.status_code == 200:
-        dataframe = pd.read_csv(pd.compat.StringIO(respuesta.text))
-
-        if dataframe.isnull().any().any():
-            print("Se encontraron valores faltantes en el DataFrame.")
-            dataframe = dataframe.dropna()
-
-        if dataframe.duplicated().any():
-            print("Se encontraron filas duplicadas en el DataFrame.")
-            dataframe = dataframe.drop_duplicates()
-
-        rangos = [0, 12, 19, 39, 59, float('inf')]
-        etiquetas = ['Niño', 'Adolescente', 'Jóvenes adulto', 'Adulto', 'Adulto mayor']
-        dataframe['CategoriaEdad'] = pd.cut(dataframe['age'], bins=rangos, labels=etiquetas)
-
-        dataframe.to_csv("datos_procesados.csv", index=False)
-        print("Procesamiento completado. Resultados guardados como datos_procesados.csv.")
-    else:
-        print(f"Error al descargar el archivo. Código de respuesta: {respuesta.status_code}")
